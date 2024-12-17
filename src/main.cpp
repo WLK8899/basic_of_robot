@@ -39,7 +39,7 @@ const float WHEEL_RADIUS = 0.05; // 轮子半径 0.05 米
 MaxamWheel maxamwheel(WHEEL_BASE, WHEEL_TRACK, WHEEL_RADIUS);
 
 // 定义轮子的转速数组 (rad/s)
-float wheelSpeeds[4];
+int wheelSpeeds[4];
 
 float Vx = 1.0;    // 前进 1 m/s
 float Vy = 0.5;    // 侧向 0.5 m/s
@@ -59,7 +59,7 @@ void timerISR();
 void readSensors();
 void followLine();
 
-void set_speed(float *wheelSpeeds);
+void set_speed(int *wheelSpeeds);
 void set_angle(int *angle);
 
 // 用户自定义命令解析回调函数
@@ -98,7 +98,7 @@ void loop()
   {
     timerFlag = false;
     readSensors();
-    followLine();
+    //followLine();
   }
 
   // 非定时任务
@@ -137,7 +137,7 @@ void set_angle(int *angle)
   servo5.write(angle[4]);
 }
 
-void set_speed(float *wheelSpeeds)
+void set_speed(int *wheelSpeeds)
 {
   sprintf(cmd_return_tmp, "#%03dP%04dT%04d!", 6, 1500 + wheelSpeeds[0], 0); // 组合指令
   Serial.println(cmd_return_tmp);                                           // 解析ZMotor指令-左电机正向
