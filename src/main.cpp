@@ -3,19 +3,24 @@
 #include <Servo.h>
 
 #include "MaxamWheel.h"
-#include "SerialParser.h"
+#include "SoftSerialParser.h"
+#include "Ultrasonic.h"
 /***************************引脚定义**************************/
 
 // 红外传感器引脚
 const int leftSensorPin = A5;  // 左红外传感器
 const int rightSensorPin = A4; // 右红外传感器
 
+// 定义超声波测距模块引脚
+const int trigPin = A3; // 触发引脚连接 A3
+const int echoPin = A0; // 回声引脚连接 A0
+
 // 定义舵机信号线连接的引脚
-const int SERVO1_PIN = 3;
-const int SERVO2_PIN = 5;
-const int SERVO3_PIN = 6;
-const int SERVO4_PIN = 9;
-const int SERVO5_PIN = 10;
+const int SERVO1_PIN = 7;
+const int SERVO2_PIN = 3;
+const int SERVO3_PIN = 5;
+const int SERVO4_PIN = 6;
+const int SERVO5_PIN = 9;
 
 /*********************************************************************/
 
@@ -26,9 +31,15 @@ int servoAngle[5];
 
 volatile bool timerFlag = false; // 定时器标志
 
-// 红外传感器状态
+// 红外传感器状态  在黑线上面变量为true
 volatile bool leftOnLine = false;
 volatile bool rightOnLine = false;
+// volatile int leftOnLine = 0;
+// volatile int rightOnLine = 0;
+
+// 创建 Ultrasonic 对象
+Ultrasonic ultrasonic(trigPin, echoPin);
+volatile float distance;
 
 // 定义地盘的参数
 const float WHEEL_BASE = 0.3;    // 前后轮距 0.3 米
@@ -39,7 +50,7 @@ const float WHEEL_RADIUS = 0.05; // 轮子半径 0.05 米
 MaxamWheel maxamwheel(WHEEL_BASE, WHEEL_TRACK, WHEEL_RADIUS);
 
 // 定义轮子的转速数组 (rad/s)
-int wheelSpeeds[4];
+int wheelSpeeds[4]={-200,-200,-200,-200};
 
 float Vx = 1.0;    // 前进 1 m/s
 float Vy = 0.5;    // 侧向 0.5 m/s
@@ -48,8 +59,9 @@ float Omega = 0.2; // 旋转 0.2 rad/s
 //
 char cmd_return_tmp[64];
 
+
 // 创建 SerialParser 对象
-SerialParser serialParser;
+SoftSerialParser softParser(A1, A2);
 
 /*********************************************************************/
 
@@ -70,9 +82,14 @@ void setup()
 {
 
   Serial.begin(115200);
+  softParser.begin();
   // 设置用户自定义命令回调函数
-  serialParser.setCommandCallback(commandHandler);
+  softParser.setCommandCallback(commandHandler);
   // 设置红外传感器引脚为输入
+  pinMode(leftSensorPin, INPUT);
+  pinMode(rightSensorPin, INPUT);
+
+  ultrasonic.begin(); // 初始化超声波引脚
 
   // 连接舵机到对应引脚
   servo1.attach(SERVO1_PIN);
@@ -80,9 +97,6 @@ void setup()
   servo3.attach(SERVO3_PIN);
   servo4.attach(SERVO4_PIN);
   servo5.attach(SERVO5_PIN);
-
-  pinMode(leftSensorPin, INPUT);
-  pinMode(rightSensorPin, INPUT);
 
   // 初始化定时器
   Timer1.initialize(100000);        // 设置定时器每100ms触发一次
@@ -97,14 +111,16 @@ void loop()
   if (timerFlag)
   {
     timerFlag = false;
-    readSensors();
-    //followLine();
+     //readSensors();
+    // followLine();
+    //set_angle(servoAngle);
+    set_speed(wheelSpeeds);
   }
 
   // 非定时任务
 
   // 处理串口数据
-  serialParser.processSerial();
+  softParser.processSerial();
 }
 
 void timerISR()
@@ -117,19 +133,23 @@ void timerISR()
 void readSensors()
 {
   // 使用digitalRead读取传感器状态
-  leftOnLine = digitalRead(leftSensorPin) == LOW; // 假设黑线为低电平
+  leftOnLine = digitalRead(leftSensorPin) == LOW; // 黑线为低电平
   rightOnLine = digitalRead(rightSensorPin) == LOW;
+  distance = ultrasonic.getDistance(); // 获取距离值
 
   // 调试输出
   Serial.print("Left Sensor: ");
-  Serial.print(leftOnLine ? "ON" : "OFF");
+  Serial.print(leftOnLine);
   Serial.print(" | Right Sensor: ");
-  Serial.println(rightOnLine ? "ON" : "OFF");
+  Serial.println(rightOnLine);
+
+  Serial.print("Distance: ");
+  Serial.print(distance);
+  Serial.println(" cm");
 }
 
 void set_angle(int *angle)
 {
-
   servo1.write(angle[0]);
   servo2.write(angle[1]);
   servo3.write(angle[2]);
@@ -142,13 +162,13 @@ void set_speed(int *wheelSpeeds)
   sprintf(cmd_return_tmp, "#%03dP%04dT%04d!", 6, 1500 + wheelSpeeds[0], 0); // 组合指令
   Serial.println(cmd_return_tmp);                                           // 解析ZMotor指令-左电机正向
   delay(20);
-  sprintf(cmd_return_tmp, "#%03dP%04dT%04d!", 7, 1500 + wheelSpeeds[0], 0); // 组合指令
+  sprintf(cmd_return_tmp, "#%03dP%04dT%04d!", 7, 1500 - wheelSpeeds[0], 0); // 组合指令
   Serial.println(cmd_return_tmp);                                           // 解析ZMotor指令-左电机正向
   delay(20);
   sprintf(cmd_return_tmp, "#%03dP%04dT%04d!", 8, 1500 + wheelSpeeds[0], 0); // 组合指令
   Serial.println(cmd_return_tmp);
   delay(20);                                                                // 解析ZMotor指令-左电机正向
-  sprintf(cmd_return_tmp, "#%03dP%04dT%04d!", 9, 1500 + wheelSpeeds[0], 0); // 组合指令
+  sprintf(cmd_return_tmp, "#%03dP%04dT%04d!", 9, 1500 - wheelSpeeds[0], 0); // 组合指令
   Serial.println(cmd_return_tmp);                                           // 解析ZMotor指令-左电机正向
   delay(20);
 }
@@ -157,7 +177,7 @@ void set_speed(int *wheelSpeeds)
 void commandHandler(char *tokens[], int tokenCount)
 {
   // 检查命令格式是否正确
-  if (tokenCount < 3)
+  if (tokenCount < 2)
   {
     Serial.println("Error: Invalid command format.");
     return;
@@ -171,7 +191,7 @@ void commandHandler(char *tokens[], int tokenCount)
   // 使用 switch-case 处理命令
   switch (command)
   {
-  case 'W': // 处理 "T" 命令：设置目标变量值
+  case 'W': // 处理 "W" 命令：设置目标轮速变量值
     if (target == 0)
     {
       wheelSpeeds[0] = value;
@@ -203,10 +223,10 @@ void commandHandler(char *tokens[], int tokenCount)
     }
     break;
 
-  case 'R': // 处理 "R" 命令：读取当前目标变量值
+  case 'A': // 处理 "A" 命令：修改舵机值
     if (target == 0)
     {
-      servoAngle[0]=value;
+      servoAngle[0] = value;
       Serial.print("servoAngle[0] value: ");
       Serial.println(servoAngle[0]);
     }
@@ -241,19 +261,46 @@ void commandHandler(char *tokens[], int tokenCount)
     }
     break;
 
-  case 'C': // 处理 "C" 命令：清零目标变量值
+  case 'R': // 处理 "R" 命令：读取数组的变量值
     if (target == 1)
     {
-      //targetVariable1 = 0;
-      Serial.println("Target 1 cleared.");
+      // 读取并输出 servoAngle 数组的值
+      Serial.println("Servo Angles:");
+      for (size_t i = 0; i < sizeof(servoAngle) / sizeof(servoAngle[0]); i++)
+      {
+        Serial.print("Servo ");
+        Serial.print(i + 1);
+        Serial.print(": ");
+        Serial.println(servoAngle[i]);
+      }
     }
     else if (target == 2)
     {
-      //targetVariable2 = 0;
-      Serial.println("Target 2 cleared.");
+      // 读取并输出 wheelSpeeds 数组的值
+      Serial.println("Wheel Speeds:");
+      for (size_t i = 0; i < sizeof(wheelSpeeds) / sizeof(wheelSpeeds[0]); i++)
+      {
+        Serial.print("Wheel ");
+        Serial.print(i + 1);
+        Serial.print(": ");
+        Serial.println(wheelSpeeds[i]);
+      }
     }
+    else if (target == 3)
+    {
+      Serial.print("Left Sensor: ");
+      Serial.print(leftOnLine);
+      Serial.print(" | Right Sensor: ");
+      Serial.println(rightOnLine);
+
+      Serial.print("Distance: ");
+      Serial.print(distance);
+      Serial.println(" cm");
+    }
+
     else
     {
+      // 错误处理：target 无效
       Serial.println("Error: Invalid target index.");
     }
     break;
