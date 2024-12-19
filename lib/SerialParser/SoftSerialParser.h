@@ -21,7 +21,7 @@ public:
 private:
     SoftwareSerial softSerial; // 软件串口对象
     char buffer[64];           // 接收缓冲区
-    int bufferIndex;           // 缓冲区索引
+    size_t bufferIndex; // 使用 size_t 作为缓冲区索引
     void (*commandCallback)(char *tokens[], int tokenCount); // 命令回调函数
 
     void parseBuffer(); // 解析接收的数据

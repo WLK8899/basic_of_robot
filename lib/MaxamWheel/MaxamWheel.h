@@ -3,38 +3,23 @@
 
 #include <Arduino.h>
 
+class MaxamWheel
+{
 
-class MaxamWheel {
 public:
-    // 构造函数，初始化轮子位置和参数
-    // wheelBase: 前后轮距
-    // wheelTrack: 轮间距
-    // wheelRadius: 轮子半径
-    MaxamWheel(float wheelBase, float wheelTrack, float wheelRadius);
+    MaxamWheel();
 
-    // 逆向运动学：根据期望的机器人速度计算各个轮子的转速
-    // vx: 前进速度 (m/s)
-    // vy: 侧向速度 (m/s)
-    // omega: 旋转速度 (rad/s)
-    // Returns wheel speeds in radians per second
-    void inverseKinematics(float vx, float vy, float omega, float* wheelSpeeds);
-
-    // 正向运动学：根据各个轮子的转速计算机器人速度
-    // wheelSpeeds: 各轮子的转速 (rad/s)
-    // Returns vx, vy, omega by reference
-    void forwardKinematics(float* wheelSpeeds, float &vx, float &vy, float &omega);
-
-    // 设置轮子的最大转速（可选）
-    void setMaxWheelSpeed(float maxSpeed);
-
-    // 获取轮子的最大转速
-    float getMaxWheelSpeed();
+    void set_speed(int Vx, int Vy, int omega);
 
 private:
-    float L; // 前后轮距 (m)
-    float W; // 轮间距 (m)
-    float R; // 轮子半径 (m)
-    float maxWheelSpeed; // 最大轮速 (rad/s)
+    // 麦克纳姆轮速度数组
+    int targetSpeeds[4];
+    int currentSpeeds[4];
+
+    char cmd_return_tmp[64];
+    const int SMOOTH_INCREMENT = 10; // 平滑速度增量
+
+    void smoothSetSpeed(int targetSpeeds[4]);
 };
 
 #endif

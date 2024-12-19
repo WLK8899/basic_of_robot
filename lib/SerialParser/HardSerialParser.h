@@ -21,7 +21,7 @@ private:
     HardwareSerial &serial;
     long baudRate;
     char buffer[64];
-    int bufferIndex;
+    size_t bufferIndex; // 使用 size_t 作为缓冲区索引
     void (*commandCallback)(char *tokens[], int tokenCount);
 
     void parseBuffer();
