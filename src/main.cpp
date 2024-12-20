@@ -1,6 +1,5 @@
 #include <Arduino.h>
 
-
 // #include "SoftSerialParser.h"
 #include "HardSerialParser.h"
 #include "Ultrasonic.h"
@@ -29,8 +28,8 @@ const int SERVO6_PIN = 8;
 
 /***************************全局变量定义**************************/
 
-int servoAngle[6] = {96, 100, 90, 160, 0, 0}; // 96,120,90,95,0,0
 
+int servoAngle[6] = {90, 0, 0, 0, 0, 0}; 
 volatile float distance;
 
 // 定义轮子的转速数组 (rad/s)
@@ -56,7 +55,10 @@ void commandHandler(char *tokens[], int tokenCount);
 
 void rotation(int degree);
 /*************************************************************************** */
-
+// 目标坐标
+float target_x = 0;  // x 方向目标点
+float target_y = 246;  // y 方向目标点
+float target_z = 100; // z 方向目标点
 void setup()
 {
   Serial.begin(115200);
@@ -68,8 +70,9 @@ void setup()
   // 设置红外传感器引脚为输入
   lineFollower.begin();
   ultrasonic.begin(); // 初始化超声波引脚
-  Arm.begin();  // 连接舵机到对应引脚
+  Arm.begin();        // 连接舵机到对应引脚
 
+  // Arm.set_angle(servoAngle);
   Serial.println("Initialization completed");
 }
 
@@ -86,11 +89,27 @@ void loop()
   // Serial.print(executionTime);
   // Serial.println(" microseconds");
 
+  delay(1000);
 
+      // //执行逆解算，计算目标舵机角度
+      if (Arm.inverse_kinematics(target_x, target_y, target_z)) {
+          Serial.println("Inverse Kinematics Success!");
+      } else {
+          Serial.println("Inverse Kinematics Failed: Target out of reach!");
+      }
+      delay(1000);
+      if (Arm.inverse_kinematics(0, 180, 100)) {
+          Serial.println("Inverse Kinematics Success!");
+      } else {
+          Serial.println("Inverse Kinematics Failed: Target out of reach!");
+      }
+  // delay(2000);
 
+  //Arm.set_angle(servoAngle);
+  //Arm.move_to_angles(servoAngle);
   // // 处理串口数据
   // //softParser.processSerial();
-  // hardParser.processSerial();
+  hardParser.processSerial();
 }
 
 // ====== 读取传感器数据并处理 ====== //
@@ -112,7 +131,6 @@ void readSensors()
   Serial.print(distance);
   Serial.println(" cm");
 }
-
 
 // 用户自定义命令解析回调函数
 void commandHandler(char *tokens[], int tokenCount)
@@ -196,6 +214,12 @@ void commandHandler(char *tokens[], int tokenCount)
       Serial.print("servoAngle[4] set to: ");
       Serial.println(servoAngle[4]);
     }
+    else if (target == 5)
+    {
+      servoAngle[5] = value;
+      Serial.print("servoAngle[5] set to: ");
+      Serial.println(servoAngle[5]);
+    }
     else
     {
       Serial.println("Error: Invalid target index.");
@@ -232,7 +256,7 @@ void commandHandler(char *tokens[], int tokenCount)
       Serial.print("Left Sensor: ");
       // Serial.print(leftOnLine);
       Serial.print(" | Right Sensor: ");
-      //Serial.println(rightOnLine);
+      // Serial.println(rightOnLine);
 
       Serial.print("Distance: ");
       Serial.print(distance);

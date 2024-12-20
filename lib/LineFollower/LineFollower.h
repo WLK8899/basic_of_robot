@@ -14,7 +14,7 @@ public:
     void begin();
 
     // 循迹控制任务（放在loop中调用）
-    void followLine(bool leftDetected, bool rightDetected);
+    void followLine();
 
 private:
     // 传感器引脚

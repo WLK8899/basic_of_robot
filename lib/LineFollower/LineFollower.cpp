@@ -15,10 +15,10 @@ void LineFollower::begin()
 }
 
 // 循迹主任务
-void LineFollower::followLine(bool leftDetected, bool rightDetected)
+void LineFollower::followLine()
 {
-    // bool leftDetected = digitalRead(leftSensorPin);
-    // bool rightDetected = digitalRead(rightSensorPin);
+    bool leftDetected = digitalRead(leftSensorPin);
+    bool rightDetected = digitalRead(rightSensorPin);
 
     if (leftDetected && rightDetected)
     {
