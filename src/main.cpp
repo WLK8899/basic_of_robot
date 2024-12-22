@@ -29,7 +29,7 @@ const int SERVO6_PIN = 8;
 /***************************全局变量定义**************************/
 // 循迹机械臂状态：90, 60 ,-40 , 100, 0, 0
 // 上电状态：90, 0, 0, 0, 0, 0
-int servoAngle[6] = {90, 60 ,-40 , 100, 0, 0};
+int servoAngle[6] = {90, 0 ,80 , 80, 172, 0};
 volatile float distance;
 
 // 定义轮子的转速数组 (rad/s)
@@ -86,9 +86,10 @@ void setup()
   ultrasonic.begin(); // 初始化超声波引脚
   Arm.begin();        // 连接舵机到对应引脚
   Arm.set_angle(servoAngle);
+  
+  delay(2000);
   Serial.println("Initialization completed");
   
-  // delay(1000);
   // // 修改双路ID为6和8
   // modifyMotorID();
 }
@@ -101,11 +102,11 @@ void loop()
    follower.followLine(); // 执行循迹任务
 
  // readSensors();
-  //Arm.set_angle(servoAngle);
-  // Arm.move_to_angles(servoAngle);
+ // Arm.set_angle(servoAngle);
+  // Arm.move_to_angles(servoAngle); 
   //  // 处理串口数据
   //  //softParser.processSerial();
-  //hardParser.processSerial();
+ // hardParser.processSerial();
 
   // unsigned long endTime = micros();
   // unsigned long executionTime = endTime - startTime;

@@ -25,16 +25,16 @@ private:
     // 底盘控制类
     MaxamWheel Wheel;
     // 控制参数
-    const int MAX_SPEED = 600;    // 最大速度
-    const int MAX_ROTATION = 600; // 最大旋转速度
-    const float Kp_linear = 13;   // 线性速度比例系数
-    const float Ki_linear = 0;    // 线性速度积分系数
-    const float Kp_angular = 0.8; // 旋转速度比例系数
+    const int MAX_SPEED = 400;    // 最大速度
+    const int MAX_ROTATION = 500; // 最大旋转速度
+    const float Kp_linear = 17;   // 线性速度比例系数
+    const float Ki_linear = 0.1;    // 线性速度积分系数
+    const float Kp_angular = 8; // 旋转速度比例系数
 
     float linear_error_sum = 0; // 线性速度积分误差
 
     unsigned long lastUpdateTime = 0;         // 上次更新时间
-    const unsigned long updateInterval = 80; // 单位 ms（10 Hz）
+    const unsigned long updateInterval = 50; // 单位 ms（10 Hz）
 
     // 从 OpenMV 接收数据
     bool receiveOpenMVData(int &rho_err, int &pingyi, int &theta_err, int &value);

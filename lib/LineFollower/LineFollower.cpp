@@ -20,47 +20,52 @@ void LineFollower::followLine()
     if (currentTime - lastUpdateTime >= updateInterval)
     {
         lastUpdateTime = currentTime;
-    // 计算速度
-    int vx = 0, vy = 0, omega = 0;
-    // 接收数据
-    int pingyi = 0, pingyi_dir = 0, theta_err = 0, theta_dir = 0;
+        // 计算速度
+        int vx = 0, vy = 0, omega = 0;
+        // 接收数据
+        int pingyi = 0, pingyi_dir = 0, theta_err = 0, theta_dir = 0;
 
-    if (receiveOpenMVData(pingyi, pingyi_dir, theta_err, theta_dir))
-    {
-        computeSpeed(pingyi, theta_err, vx, vy, omega);
+        if (receiveOpenMVData(pingyi, pingyi_dir, theta_err, theta_dir))
+        {
+            computeSpeed(pingyi, theta_err, vx, vy, omega);
 
-        // Wheel.set_speed(vx, vy, omega);    // 设置轮子速度
-        Serial.print(lastUpdateTime);
-        Serial.print(" vx:");
-        Serial.print(vx);
-        Serial.print(" vy:");
-        Serial.print(vy);
-        Serial.print(" vz:");
-        Serial.println(omega);
-    };
+           Wheel.set_speed(vx, vy, omega); // 设置轮子速度
+            Serial.print(lastUpdateTime);
+            Serial.print(" vx:");
+            Serial.print(vx);
+            Serial.print(" vy:");
+            Serial.print(vy);
+            Serial.print(" vz:");
+            Serial.println(omega);
+        }
+        // else{
+        //     Wheel.set_speed(0,0,0);
+        // }
     }
-    else{
-       // Serial.println("chaoshi : ");
-       return;
+    else
+    {
+
+        // Serial.println("chaoshi : ");
+        return;
     }
 }
 
 bool LineFollower::receiveOpenMVData(int &pingyi, int &pingyi_dir, int &theta_err, int &theta_dir)
 {
     // 从串口读取数据到 buffer
-   
+
     while (Serial.available() > 0)
     {
         // 搜索帧头
-        byte data_by=Serial.read();
+        byte data_by = Serial.read();
         if (bufferIndex == 0 && data_by != 0x5A)
         {
-            //Serial.println("222222222222");
+            // Serial.println("222222222222");
             continue; // 如果不是帧头，跳过
         }
 
         // 存储到缓冲区
-        //Serial.println("3333333333");
+        // Serial.println("3333333333");
         buffer[bufferIndex++] = data_by;
 
         // 如果缓冲区已满，检查是否为完整帧
@@ -70,7 +75,7 @@ bool LineFollower::receiveOpenMVData(int &pingyi, int &pingyi_dir, int &theta_er
             if (buffer[17] != 0xFE)
             {
                 Serial.println("openMV Invalid frame");
-                 bufferIndex = 0; // 重置缓冲区索引
+                bufferIndex = 0; // 重置缓冲区索引
                 return false;
             }
 
@@ -98,7 +103,7 @@ bool LineFollower::receiveOpenMVData(int &pingyi, int &pingyi_dir, int &theta_er
                                  (static_cast<int32_t>(buffer[15]) << 8) |
                                  static_cast<int32_t>(buffer[16]);
             // 根据偏移方向（bool_pingyi）设置 pingyi 的正负
-            pingyi = (bool_pingyi == 1) ? -abs(pingyi_zhongxin) : abs(pingyi_zhongxin);
+            pingyi = (bool_pingyi == 1) ? abs(pingyi_zhongxin) : -abs(pingyi_zhongxin);
 
             // 根据旋转方向（bool_angle）设置 theta_err 的正负
             theta_err = (bool_angle == 1) ? -abs(angle) : abs(angle);
@@ -145,5 +150,5 @@ void LineFollower::computeSpeed(int rho_err, int theta_err, int &vx, int &vy, in
         omega = -MAX_ROTATION;
 
     // 固定前进速度（假设无特殊需求，保持 0）
-    vx = 300;
+    vx = 350;
 }
