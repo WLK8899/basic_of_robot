@@ -29,7 +29,7 @@ const int SERVO6_PIN = 8;
 /***************************全局变量定义**************************/
 // 循迹机械臂状态：90, 60 ,-40 , 100, 0, 0
 // 上电状态：90, 0, 0, 0, 0, 0
-int servoAngle[6] = {90, 0 ,80 , 80, 172, 0};
+int servoAngle[6] = {90, 0 ,90 , 90, 180, 0};
 volatile float distance;
 
 // 定义轮子的转速数组 (rad/s)
@@ -78,7 +78,7 @@ void setup()
 {
   Serial.begin(115200);
 
-  //hardParser.setCommandCallback(commandHandler);
+  hardParser.setCommandCallback(commandHandler);
   // softParser.begin();
   // // 设置用户自定义命令回调函数
   // softParser.setCommandCallback(commandHandler);
@@ -99,14 +99,14 @@ void loop()
 
   // unsigned long startTime = micros();
   //Wheel.set_speed(0,300,0);
-   follower.followLine(); // 执行循迹任务
+  // follower.followLine(); // 执行循迹任务
 
  // readSensors();
- // Arm.set_angle(servoAngle);
+  Arm.set_angle(servoAngle);
   // Arm.move_to_angles(servoAngle); 
   //  // 处理串口数据
   //  //softParser.processSerial();
- // hardParser.processSerial();
+ hardParser.processSerial();
 
   // unsigned long endTime = micros();
   // unsigned long executionTime = endTime - startTime;

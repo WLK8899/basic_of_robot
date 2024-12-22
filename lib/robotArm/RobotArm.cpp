@@ -25,25 +25,23 @@ void RobotArm::begin()
     servo4.attach(SERVO4_PIN);
     servo5.attach(SERVO5_PIN);
     servo6.attach(SERVO6_PIN);
-
-
 }
 
 // 设置舵机角度
 void RobotArm::set_angle(int *angle)
 {
 
-    servo1.write(static_cast<int>((28+angle[0] *0.7778) ));
+    servo1.write(static_cast<int>((28 + angle[0] * 0.7432)));
     delay(50);
-    servo2.write(static_cast<int>((55+angle[1] *0.7778) ));
+    servo2.write(static_cast<int>((51.11 + angle[1] * 0.7432)));
     delay(50);
-    servo3.write(static_cast<int>((20+(angle[2]+90) *0.7778) ));
+    servo3.write(static_cast<int>((17.667 + (angle[2] + 90) * 0.7432)));
     delay(50);
-    servo4.write(static_cast<int>((25+(angle[3]+90) *0.7778) ));
+    servo4.write(static_cast<int>((27.87 + (angle[3] + 90) * 0.7432)));
     delay(50);
-    servo5.write(static_cast<int>((angle[4] *0.7778) ));
+    servo5.write(static_cast<int>((angle[4] * 0.7432)));
     delay(50);
-    servo6.write(static_cast<int>((angle[5] *0.7778) ));
+    servo6.write(static_cast<int>((angle[5] * 0.7432)));
 }
 
 // 检查目标点是否在可达范围内
@@ -83,7 +81,7 @@ bool RobotArm::inverse_kinematics(float target_x, float target_y, float target_z
     if (target_angle[1] >= -30 && target_angle[2] >= 0 && target_angle[3] >= 0 &&
         target_angle[1] <= 90 && target_angle[2] <= 180 && target_angle[3] <= 180)
     {
-        //move_to_angles(target_angle); // 如果角度合法，设置舵机角度
+        // move_to_angles(target_angle); // 如果角度合法，设置舵机角度
         set_angle(target_angle);
         return true;
     }
@@ -226,27 +224,26 @@ void RobotArm::gradual_move(int servo_index, int target_angle)
         {
             current_angle -= step; // 减少角度
         }
-
-        // 输出到舵机 //static_cast<int>(angle[i] * 0.6666)
+        // 输出到舵机 //
         switch (servo_index)
         {
         case 0:
-            servo1.write(static_cast<int>((25+current_angle *0.7778) ));
+            servo1.write(static_cast<int>((28 + current_angle * 0.7432)));
             break;
         case 1:
-            servo2.write(static_cast<int>((55+current_angle *0.7778)));
+            servo2.write(static_cast<int>((51.11 + current_angle * 0.7432)));
             break;
         case 2:
-            servo3.write(static_cast<int>((20+(current_angle+90) *0.7778) ));
+            servo3.write(static_cast<int>((17.667+ (current_angle + 90) * 0.7432)));
             break;
         case 3:
-            servo4.write(static_cast<int>((25+(current_angle+90) *0.7778) ));
+            servo4.write(static_cast<int>((27.87 + (current_angle + 90) * 0.7432)));
             break;
         case 4:
-            servo5.write(static_cast<int>((current_angle *0.7778) ));
-            break; 
+            servo5.write(static_cast<int>((current_angle * 0.7432)));
+            break;
         case 5:
-            //servo6.write(static_cast<int>(current_angle * 0.6666)); 
+            // servo6.write(static_cast<int>(current_angle * 0.6666));
             break;
         }
 
@@ -261,7 +258,7 @@ void RobotArm::gradual_move(int servo_index, int target_angle)
 void RobotArm::move_to_angles(int *target_angles)
 {
     for (int i = 0; i < 6; i++)
-    {  
+    {
         gradual_move(i, target_angles[i]); // 逐步移动每个舵机
     }
 }
