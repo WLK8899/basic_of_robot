@@ -6,7 +6,7 @@
 class HardSerialParser {
 public:
     // 构造函数：传入 HardwareSerial 对象和波特率
-    HardSerialParser(HardwareSerial &serialPort = Serial, long baudRate = 9600);
+    HardSerialParser(HardwareSerial &serialPort = Serial, long baudRate = 115200);
 
     // 初始化串口
     void begin();

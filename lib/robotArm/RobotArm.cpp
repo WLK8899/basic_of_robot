@@ -33,7 +33,7 @@ void RobotArm::begin()
 void RobotArm::set_angle(int *angle)
 {
 
-    servo1.write(static_cast<int>((25+angle[0] *0.7778) ));
+    servo1.write(static_cast<int>((30+angle[0] *0.7778) ));
     delay(50);
     servo2.write(static_cast<int>((55+angle[1] *0.7778) ));
     delay(50);

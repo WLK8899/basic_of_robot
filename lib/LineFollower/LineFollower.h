@@ -3,41 +3,44 @@
 
 #include <Arduino.h>
 #include "MaxamWheel.h"
+#include "SoftwareSerial.h"
 
 class LineFollower
 {
 public:
-    // 构造函数：初始化传感器引脚和总线电机接口
-    LineFollower(int leftSensor, int rightSensor);
+    // 构造函数：传入串口对象
+    LineFollower(Stream &serial);
 
     // 初始化
     void begin();
 
-    // 循迹控制任务（放在loop中调用）
+    // 循迹控制任务（放在 loop 中调用）
     void followLine();
 
 private:
-    // 传感器引脚
-    int leftSensorPin;
-    int rightSensorPin;
-
+    // 串口
+    Stream &serial;
+    uint8_t buffer[18]; // 假设 buffer 长度为 18（以包含所有数据）
+    int bufferIndex = 0;
+    // 底盘控制类
     MaxamWheel Wheel;
-    // 速度参数
-    const int MAX_SPEED = 600;       // 最大速度，范围-1000~1000
-    const int TURN_SPEED = 400;      // 平移修正速度
-    const int ROTATE_SPEED = 300;    // 旋转速度
-    const int SMOOTH_INCREMENT = 10; // 平滑速度增量
+    // 控制参数
+    const int MAX_SPEED = 600;    // 最大速度
+    const int MAX_ROTATION = 600; // 最大旋转速度
+    const float Kp_linear = 13;   // 线性速度比例系数
+    const float Ki_linear = 0;    // 线性速度积分系数
+    const float Kp_angular = 0.8; // 旋转速度比例系数
 
-    // 修正偏移方向机制  向右偏为正，向左偏为负
-    int directionCounter;
+    float linear_error_sum = 0; // 线性速度积分误差
 
-    unsigned long offTrackStartTime;              // 记录脱线处理的开始时间
-    const unsigned long MAX_OFFTRACK_TIME = 1000; // 最大脱线处理时间（毫秒）
+    unsigned long lastUpdateTime = 0;         // 上次更新时间
+    const unsigned long updateInterval = 80; // 单位 ms（10 Hz）
 
-    // 修正完成函数
-    void isOK();
-    void handleStraightLine();
-    void handleOffTrack();
+    // 从 OpenMV 接收数据
+    bool receiveOpenMVData(int &rho_err, int &pingyi, int &theta_err, int &value);
+    // 计算速度
+    void computeSpeed(int rho_err, int theta_err, int &vx, int &vy, int &omega);
 };
-
 #endif
+
+// 根据openmv实际传来的数据来调参pi

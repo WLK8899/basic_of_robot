@@ -27,9 +27,9 @@ const int SERVO6_PIN = 8;
 /*********************************************************************/
 
 /***************************全局变量定义**************************/
-
-
-int servoAngle[6] = {90, 0, 0, 0, 0, 0}; 
+// 循迹机械臂状态：90, 60 ,-40 , 100, 0, 0
+// 上电状态：90, 0, 0, 0, 0, 0
+int servoAngle[6] = {90, 60 ,-40 , 100, 0, 0};
 volatile float distance;
 
 // 定义轮子的转速数组 (rad/s)
@@ -39,7 +39,9 @@ int wheelSpeeds[4] = {-200, -200, -200, -200};
 // SoftSerialParser softParser(A1, A2);
 HardSerialParser hardParser(Serial);
 // 创建循迹对象
-LineFollower lineFollower(leftSensorPin, rightSensorPin);
+LineFollower follower(Serial);
+MaxamWheel Wheel;
+char cmd_return_tmp[64];
 // 创建 Ultrasonic 对象
 Ultrasonic ultrasonic(trigPin, echoPin);
 
@@ -47,7 +49,20 @@ RobotArm Arm(SERVO1_PIN, SERVO2_PIN, SERVO3_PIN, SERVO4_PIN, SERVO5_PIN, SERVO6_
 /*********************************************************************/
 
 /******************************定义函数************************************ */
+void sendCommand(String command) {
+  // 通过硬件串口发送字符串指令
+  Serial.print(command);
+  Serial.print('\r'); // 添加回车符结束指令（如果协议需要）
+}
+void modifyMotorID() {
+  // 根据文档发送修改ID的指令
+  // 修改双路ID为6和8：指令格式为 `#255PID006+008!`
+  String command = "#255PID006+007!";
+  sendCommand(command);
 
+  // 调试信息：将发送的指令输出到串口监视器
+  //Serial.println("Command sent: " + command);
+}
 void readSensors();
 
 // 用户自定义命令解析回调函数
@@ -56,32 +71,41 @@ void commandHandler(char *tokens[], int tokenCount);
 void rotation(int degree);
 /*************************************************************************** */
 // 目标坐标
-float target_x = 0;  // x 方向目标点
-float target_y = 246;  // y 方向目标点
+float target_x = 0;   // x 方向目标点
+float target_y = 246; // y 方向目标点
 float target_z = 100; // z 方向目标点
 void setup()
 {
   Serial.begin(115200);
 
-  hardParser.setCommandCallback(commandHandler);
+  //hardParser.setCommandCallback(commandHandler);
   // softParser.begin();
   // // 设置用户自定义命令回调函数
   // softParser.setCommandCallback(commandHandler);
-  // 设置红外传感器引脚为输入
-  lineFollower.begin();
+  follower.begin();   // 初始化
   ultrasonic.begin(); // 初始化超声波引脚
   Arm.begin();        // 连接舵机到对应引脚
-
-  // Arm.set_angle(servoAngle);
+  Arm.set_angle(servoAngle);
   Serial.println("Initialization completed");
+  
+  // delay(1000);
+  // // 修改双路ID为6和8
+  // modifyMotorID();
 }
 
 void loop()
 {
 
   // unsigned long startTime = micros();
-  // readSensors();
-  // lineFollower.followLine(leftOnLine, rightOnLine); // 调用循迹任务
+  //Wheel.set_speed(0,300,0);
+   follower.followLine(); // 执行循迹任务
+
+ // readSensors();
+  //Arm.set_angle(servoAngle);
+  // Arm.move_to_angles(servoAngle);
+  //  // 处理串口数据
+  //  //softParser.processSerial();
+  //hardParser.processSerial();
 
   // unsigned long endTime = micros();
   // unsigned long executionTime = endTime - startTime;
@@ -89,27 +113,7 @@ void loop()
   // Serial.print(executionTime);
   // Serial.println(" microseconds");
 
-  delay(1000);
 
-      // //执行逆解算，计算目标舵机角度
-      if (Arm.inverse_kinematics(target_x, target_y, target_z)) {
-          Serial.println("Inverse Kinematics Success!");
-      } else {
-          Serial.println("Inverse Kinematics Failed: Target out of reach!");
-      }
-      delay(1000);
-      if (Arm.inverse_kinematics(0, 180, 100)) {
-          Serial.println("Inverse Kinematics Success!");
-      } else {
-          Serial.println("Inverse Kinematics Failed: Target out of reach!");
-      }
-  // delay(2000);
-
-  //Arm.set_angle(servoAngle);
-  //Arm.move_to_angles(servoAngle);
-  // // 处理串口数据
-  // //softParser.processSerial();
-  hardParser.processSerial();
 }
 
 // ====== 读取传感器数据并处理 ====== //

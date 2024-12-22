@@ -1,18 +1,21 @@
+#include <Arduino.h>
 #include "LineFollower.h"
 
-// 定义传感器引脚
-const int LEFT_SENSOR = 2;   // 左红外传感器引脚
-const int RIGHT_SENSOR = 3;  // 右红外传感器引脚
-// 创建循迹对象
-LineFollower lineFollower(LEFT_SENSOR, RIGHT_SENSOR);
+// 使用软件串口（如果硬件串口占用，切换为 SoftwareSerial）
+#include <SoftwareSerial.h>
+SoftwareSerial mySerial(10, 11); // RX = 10, TX = 11
 
-void setup() {
-    Serial.begin(115200);
-    lineFollower.begin();
-    Serial.println("Line Follower Initialized...");
+LineFollower follower(mySerial);
+
+void setup()
+{
+    Serial.begin(115200); // 调试信息
+    mySerial.begin(115200); // 用于接收 OpenMV 数据
+
+    follower.begin(); // 初始化
 }
 
-void loop() {
-    lineFollower.followLine(); // 调用循迹任务
-    delay(10); // 控制任务频率
+void loop()
+{
+    follower.followLine(); // 执行循迹任务
 }
