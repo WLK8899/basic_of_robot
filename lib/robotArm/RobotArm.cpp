@@ -35,9 +35,9 @@ void RobotArm::set_angle(int *angle)
     delay(50);
     servo2.write(static_cast<int>((51.11 + angle[1] * 0.7432)));
     delay(50);
-    servo3.write(static_cast<int>((17.667 + (angle[2] + 90) * 0.7432)));
+    servo3.write(static_cast<int>((angle[2] * 0.7432)));
     delay(50);
-    servo4.write(static_cast<int>((27.87 + (angle[3] + 90) * 0.7432)));
+    servo4.write(static_cast<int>((12 + angle[3] * 0.7432)));
     delay(50);
     servo5.write(static_cast<int>((angle[4] * 0.7432)));
     delay(50);
@@ -225,6 +225,7 @@ void RobotArm::gradual_move(int servo_index, int target_angle)
             current_angle -= step; // 减少角度
         }
         // 输出到舵机 //
+
         switch (servo_index)
         {
         case 0:
@@ -234,12 +235,13 @@ void RobotArm::gradual_move(int servo_index, int target_angle)
             servo2.write(static_cast<int>((51.11 + current_angle * 0.7432)));
             break;
         case 2:
-            servo3.write(static_cast<int>((17.667+ (current_angle + 90) * 0.7432)));
+            servo3.write(static_cast<int>(current_angle * 0.7432));
             break;
         case 3:
-            servo4.write(static_cast<int>((27.87 + (current_angle + 90) * 0.7432)));
+            servo4.write(static_cast<int>((12+current_angle  * 0.7432)));
             break;
         case 4:
+
             servo5.write(static_cast<int>((current_angle * 0.7432)));
             break;
         case 5:
