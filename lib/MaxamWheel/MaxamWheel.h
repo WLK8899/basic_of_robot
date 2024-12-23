@@ -10,7 +10,11 @@ public:
     MaxamWheel();
 
     void set_speed(int Vx, int Vy, int omega);
-
+    
+    void backward(float distance);
+    void turn_right();
+    void turn_left();
+    void corr_offset();
 private:
     // 麦克纳姆轮速度数组
     int targetSpeeds[4];

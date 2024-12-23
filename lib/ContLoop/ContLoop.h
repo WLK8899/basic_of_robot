@@ -2,16 +2,22 @@
 #define CONT_LOOP_H
 
 #include <Arduino.h>
+#include "Ultrasonic.h"
+#include "LineFollower.h"
+#include "RobotArm.h"
+#include "MaxamWheel.h"
 
 // 定义任务状态
-enum TaskState {
+enum TaskState
+{
     TASK_1,
     TASK_2,
     TASK_3,
     TASK_DONE
 };
 
-class ContLoop {
+class ContLoop
+{
 private:
     TaskState currentTask; // 当前任务状态
 

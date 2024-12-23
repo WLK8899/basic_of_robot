@@ -28,7 +28,6 @@ void MaxamWheel::set_speed(int Vx, int Vy, int omega)
 
     sprintf(cmd_return_tmp, "#%03dP%04dT%04d!", 9, 1500 - targetSpeeds[3], 0); // 右后轮
     Serial.println(cmd_return_tmp);
-   
 
     // smoothSetSpeed(targetSpeeds);
 
@@ -96,4 +95,36 @@ void MaxamWheel::smoothSetSpeed(int targetSpeeds[4])
     }
 }
 
-
+void MaxamWheel::backward(float distance)
+{
+    set_speed(0, 0, 0);
+    delay(20);
+    int time = distance; // 寻找其映射关系
+    set_speed(-200, 0, 0);
+    delay(time);
+    set_speed(0, 0, 0);
+}
+void MaxamWheel::turn_left()
+{
+    set_speed(0, 0, 0);
+    delay(20);
+    set_speed(0, 0, 200);
+    delay(100);
+    set_speed(0, 0, 0);
+}
+void MaxamWheel::turn_right()
+{
+    set_speed(0, 0, 0);
+    delay(20);
+    set_speed(0, 0, -200);
+    delay(100);
+    set_speed(0, 0, 0);
+}
+void MaxamWheel::corr_offset()
+{
+    set_speed(0, 0, 0);
+    delay(20);
+    set_speed(0, 0, -200);
+    delay(100);
+    set_speed(0, 0, 0);
+}

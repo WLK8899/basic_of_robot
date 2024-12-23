@@ -15,7 +15,7 @@ public:
     void begin();
 
     // 循迹控制任务（放在 loop 中调用）
-    void followLine();
+    void followLine(int Vx);
 
 private:
     // 串口

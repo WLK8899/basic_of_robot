@@ -1,23 +1,26 @@
+#include <Arduino.h>
 #include "Ultrasonic.h"
 
-// 定义超声波模块连接的引脚
-const int trigPin = A3;  // 触发引脚
-const int echoPin = A0;  // 回声引脚
+// 定义超声波模块引脚
+#define TRIG_PIN 8
+#define ECHO_PIN 9
 
-// 创建 Ultrasonic 对象
-Ultrasonic ultrasonic(trigPin, echoPin);
+Ultrasonic ultrasonic(TRIG_PIN, ECHO_PIN);
 
 void setup() {
-    Serial.begin(9600);   // 初始化串口
-    ultrasonic.begin();   // 初始化超声波引脚
-    Serial.println("Ultrasonic Distance Measurement");
+    Serial.begin(9600); // 初始化串口通信
+    ultrasonic.begin(); // 初始化超声波模块
 }
 
 void loop() {
-    float distance = ultrasonic.getDistance(); // 获取距离值
-    Serial.print("Distance: ");
-    Serial.print(distance);
+    float rawDistance = ultrasonic.getDistance();          // 获取未滤波的距离
+    float filteredDistance = ultrasonic.getFilteredDistance(); // 获取滤波后的距离
+
+    Serial.print("Raw Distance: ");
+    Serial.print(rawDistance);
+    Serial.print(" cm, Filtered Distance: ");
+    Serial.print(filteredDistance);
     Serial.println(" cm");
 
-    delay(500); // 每500ms测量一次
+    delay(100); // 延迟100毫秒
 }

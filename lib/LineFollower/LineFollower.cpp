@@ -13,7 +13,7 @@ void LineFollower::begin()
 }
 
 // 循迹控制任务
-void LineFollower::followLine()
+void LineFollower::followLine(int Vx)
 {
     unsigned long currentTime = millis();
     // 检查是否到达更新间隔
@@ -21,13 +21,13 @@ void LineFollower::followLine()
     {
         lastUpdateTime = currentTime;
         // 计算速度
-        int vx = 0, vy = 0, omega = 0;
+        int vx = Vx, vy = 0, omega = 0;
         // 接收数据
         int pingyi = 0, pingyi_dir = 0, theta_err = 0, theta_dir = 0;
 
         if (receiveOpenMVData(pingyi, pingyi_dir, theta_err, theta_dir))
         {
-            computeSpeed(pingyi, theta_err, vx, vy, omega);
+            computeSpeed(pingyi, theta_err, vx, vy, omega);//vx由调用循迹函数时指派
 
            Wheel.set_speed(vx, vy, omega); // 设置轮子速度
             Serial.print(lastUpdateTime);
@@ -150,5 +150,5 @@ void LineFollower::computeSpeed(int rho_err, int theta_err, int &vx, int &vy, in
         omega = -MAX_ROTATION;
 
     // 固定前进速度（假设无特殊需求，保持 0）
-    vx = 350;
+    //vx = 350;
 }

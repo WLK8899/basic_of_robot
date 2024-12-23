@@ -279,16 +279,16 @@ bool RobotArm::receiveOpenMVData(int &ball_color, int &ball_px, int &ball_py)
     while (Serial.available() > 0)
     {
         // 搜索帧头
-            Serial.println("222222222222");
+        Serial.println("222222222222");
         byte data_by = Serial.read();
         if (bufferIndex == 0 && data_by != 0x5C)
         {
-            //Serial.println("222222222222");
+            // Serial.println("222222222222");
             continue; // 如果不是帧头，跳过
         }
 
         // 存储到缓冲区
-        ///Serial.println("3333333333");
+        /// Serial.println("3333333333");
         buffer[bufferIndex++] = data_by;
         Serial.print(data_by);
 
@@ -306,20 +306,20 @@ bool RobotArm::receiveOpenMVData(int &ball_color, int &ball_px, int &ball_py)
             // 提取数据
             Serial.println("Color openMV is OK");
             int32_t color = (static_cast<int32_t>(buffer[1]) << 24) |
-                         (static_cast<int32_t>(buffer[2]) << 16) |
-                         (static_cast<int32_t>(buffer[3]) << 8) |
-                         static_cast<int32_t>(buffer[4]);
+                            (static_cast<int32_t>(buffer[2]) << 16) |
+                            (static_cast<int32_t>(buffer[3]) << 8) |
+                            static_cast<int32_t>(buffer[4]);
 
             // int bool_pingyi = buffer[5]; // 中心偏移方向（1 为右，0 为左）
             int32_t px = (static_cast<int32_t>(buffer[5]) << 24) |
-                      (static_cast<int32_t>(buffer[6]) << 16) |
-                      (static_cast<int32_t>(buffer[7]) << 8) |
-                      static_cast<int32_t>(buffer[8]);
+                         (static_cast<int32_t>(buffer[6]) << 16) |
+                         (static_cast<int32_t>(buffer[7]) << 8) |
+                         static_cast<int32_t>(buffer[8]);
 
             int32_t py = (static_cast<int32_t>(buffer[9]) << 24) |
-                      (static_cast<int32_t>(buffer[10]) << 16) |
-                      (static_cast<int32_t>(buffer[11]) << 8) |
-                      static_cast<int32_t>(buffer[12]);
+                         (static_cast<int32_t>(buffer[10]) << 16) |
+                         (static_cast<int32_t>(buffer[11]) << 8) |
+                         static_cast<int32_t>(buffer[12]);
 
             ball_color = color;
             ball_px = px;
@@ -334,6 +334,11 @@ bool RobotArm::receiveOpenMVData(int &ball_color, int &ball_px, int &ball_py)
             Serial.println(ball_py);
             // 处理完成，重置缓冲区
             bufferIndex = 0;
+            //检查是否为有效数据
+            if (ball_color == 0 || ball_px == 0 || ball_py == 0)
+            {
+                return false;
+            }
             return true;
         }
     }
@@ -343,7 +348,8 @@ bool RobotArm::receiveOpenMVData(int &ball_color, int &ball_px, int &ball_py)
     return false;
 }
 
-void RobotArm::catch_ball(){
-    servo_angle[5]=90;
+void RobotArm::catch_ball()
+{
+    servo_angle[5] = 90;
     servo6.write(static_cast<int>((90 * 0.7432)));
 }

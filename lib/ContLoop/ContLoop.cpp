@@ -3,6 +3,7 @@
 // 构造函数
 ContLoop::ContLoop() {
     currentTask = TASK_1; // 初始任务为 TASK_1
+    
 }
 
 // 初始化函数
