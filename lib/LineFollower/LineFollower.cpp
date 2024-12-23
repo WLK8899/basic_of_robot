@@ -74,13 +74,13 @@ bool LineFollower::receiveOpenMVData(int &pingyi, int &pingyi_dir, int &theta_er
             // 检查帧尾
             if (buffer[17] != 0xFE)
             {
-                Serial.println("openMV Invalid frame");
+                Serial.println("LineFollower openMV Invalid frame");
                 bufferIndex = 0; // 重置缓冲区索引
                 return false;
             }
 
             // 提取数据
-            Serial.println("openMV is OK");
+            Serial.println("LineFollower openMV is OK");
             int32_t pingyi_zhongxin = (static_cast<int32_t>(buffer[1]) << 24) |
                                       (static_cast<int32_t>(buffer[2]) << 16) |
                                       (static_cast<int32_t>(buffer[3]) << 8) |
@@ -120,7 +120,7 @@ bool LineFollower::receiveOpenMVData(int &pingyi, int &pingyi_dir, int &theta_er
     }
 
     // 未接收到完整帧
-    Serial.println("openMV Serial flase");
+    Serial.println("LineFollower openMV Serial flase");
     return false;
 }
 

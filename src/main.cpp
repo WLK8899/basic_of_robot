@@ -28,7 +28,8 @@ const int SERVO6_PIN = 8;
 
 /***************************全局变量定义**************************/
 // 循迹机械臂状态：90, 0 ,90 , 90, 180, 0
-// 上电状态：90, 0, 0, 0, 0, 0
+// 上电状态：90, 0, 0, 0, 180, 0
+//抓取  ：90,10 60 100, 180, 0
 int servoAngle[6] = {90, 0 ,90 , 90, 180, 0};
 volatile float distance;
 
@@ -71,14 +72,19 @@ void commandHandler(char *tokens[], int tokenCount);
 void rotation(int degree);
 /*************************************************************************** */
 // 目标坐标
-float target_x = 0;   // x 方向目标点
-float target_y = 246; // y 方向目标点
-float target_z = 100; // z 方向目标点
+float target_x = 50;   // x 方向目标点
+float target_y = 100; // y 方向目标点
+float target_z = 75; // z 方向目标点
+
+const int numReadings = 10; // 移动平均的样本数量
+int readings[numReadings];  // 存储读数的数组
+int readIndex = 0;          // 索引以存储最新的读数
+float alpha = 0.2;         // 权重因子
 void setup()
 {
   Serial.begin(115200);
 
-  hardParser.setCommandCallback(commandHandler);
+  //hardParser.setCommandCallback(commandHandler);
   // softParser.begin();
   // // 设置用户自定义命令回调函数
   // softParser.setCommandCallback(commandHandler);
@@ -87,7 +93,7 @@ void setup()
   Arm.begin();        // 连接舵机到对应引脚
   Arm.set_angle(servoAngle);
   
-  delay(2000);
+  delay(1000);
   Serial.println("Initialization completed");
   
   // // 修改双路ID为6和8
@@ -97,16 +103,25 @@ void setup()
 void loop()
 {
 
-  // unsigned long startTime = micros();
+  //unsigned long startTime = micros();
+ // unsigned long currentTime = millis();
   //Wheel.set_speed(0,300,0);
   // follower.followLine(); // 执行循迹任务
+//  if(Arm.inverse_kinematics(target_x,target_y,target_z)){
+//   Serial.println("sssssss");
+//  }
 
- // readSensors();
-  Arm.set_angle(servoAngle);
+//  else{
+//   Serial.println("flase777777777 ");
+//  }
+delay(100);
+
+ readSensors();
+  // Arm.set_angle(servoAngle);
   // Arm.move_to_angles(servoAngle); 
   //  // 处理串口数据
   //  //softParser.processSerial();
- hardParser.processSerial();
+  //hardParser.processSerial();
 
   // unsigned long endTime = micros();
   // unsigned long executionTime = endTime - startTime;
@@ -119,22 +134,23 @@ void loop()
 
 // ====== 读取传感器数据并处理 ====== //
 
-void readSensors()
-{
-  // 使用digitalRead读取传感器状态
-  int leftOnLine = digitalRead(leftSensorPin); // 黑线为低电平
-  int rightOnLine = digitalRead(rightSensorPin);
-  distance = ultrasonic.getDistance(); // 获取距离值
+void readSensors() {
+  float total = 0;
+  for (int i = 0; i < numReadings; i++) {
+    readings[i] = ultrasonic.getDistance();
+    total += readings[i];
+  }
+  distance = total / numReadings; // 计算平均值
+
+  // 更新加权移动平均
+  distance = alpha * distance + (1 - alpha) * readings[readIndex];
 
   // 调试输出
-  Serial.print("Left Sensor: ");
-  Serial.print(leftOnLine);
-  Serial.print(" | Right Sensor: ");
-  Serial.println(rightOnLine);
-
-  Serial.print("Distance: ");
+  Serial.print("Weighted Filtered Distance: ");
   Serial.print(distance);
   Serial.println(" cm");
+
+  readIndex = (readIndex + 1) % numReadings; // 更新索引
 }
 
 // 用户自定义命令解析回调函数
