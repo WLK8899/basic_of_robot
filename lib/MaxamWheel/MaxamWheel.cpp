@@ -98,11 +98,12 @@ void MaxamWheel::smoothSetSpeed(int targetSpeeds[4])
 void MaxamWheel::backward(float distance)
 {
     set_speed(0, 0, 0);
-    delay(20);
+    delay(50);
     int time = distance; // 寻找其映射关系
     set_speed(-200, 0, 0);
     delay(time);
     set_speed(0, 0, 0);
+    delay(50);
 }
 void MaxamWheel::turn_left()
 {

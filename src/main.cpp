@@ -23,6 +23,13 @@ const int SERVO6_PIN = 8;
 /*********************************************************************/
 #define DISTANCE_THRESHOLD 15.0 // 距离阈值：15厘米
 #define BLOCK_TIME 2000         // 屏蔽时间：2000毫秒
+
+#define RED 2
+#define GREEN 3
+#define BLUE 4
+#define NUMBER 6
+
+int total_num = 0;
 /***************************全局变量定义**************************/
 // 循迹机械臂状态：90, 0 ,90 , 90, 180, 0
 // 上电状态：90, 0, 0, 0, 180, 0
@@ -30,6 +37,7 @@ const int SERVO6_PIN = 8;
 int servoAngle_init[6] = {90, 0, 0, 0, 180, 0};
 int servoAngle_follow[6] = {90, 0, 90, 90, 180, 0};
 int servoAngle_catch[6] = {90, 10, 60, 100, 180, 0};
+int servoAngle_down[6];
 volatile float distance;
 
 // 定义轮子的转速数组 (rad/s)
@@ -54,7 +62,7 @@ enum TaskState
   CATCH,
   GO_TO_RED,
   GO_TO_GREEN,
-  GOT_TO_BLUE,
+  GO_TO_BLUE,
   RED_BACK_ZERO,
   GREEN_BACK_ZERO,
   BLUE_BACK_ZERO,
@@ -91,24 +99,16 @@ void clearSerialBuffer(HardwareSerial &serial)
   }
 }
 // 检测障碍物函数
-bool bolockJudge(int identifierCount);
-// 超声波检测标志位函数
+bool blockJudge(int identifierCount);
+// 姿态修正函数
+void corr_pos(LineFollower &follower, int vx = 0, unsigned long totalTime = 2000, unsigned long cycleTime = 80);
 
 void MainUpdate();
 void LineFollowTask();
 void CatchTask();
-void GoToRedTask();
-void GoToGreenTask();
-void GoToBuleTask();
-void RedBackZeroTask();
-void GreenBacKZeroTask();
-void BuleBackZeroTask();
+void GoToColorTask(int color);
+void ColorBackZeroTask(int color);
 void WriteTask();
-
-// 根据条件检查任务是否完成
-bool checkTask1Complete();
-bool checkTask2Complete();
-bool checkTask3Complete();
 
 /*************************************************************************** */
 // 目标坐标
@@ -188,17 +188,17 @@ void MainUpdate()
     CatchTask();
     break;
   case GO_TO_RED:
-    GoToRedTask();
+    GoToColorTask(RED);
   case GO_TO_GREEN:
-    GoToGreenTask();
-  case GOT_TO_BLUE:
-    GoToBuleTask();
+    GoToColorTask(GREEN);
+  case GO_TO_BLUE:
+    GoToColorTask(BLUE);
   case RED_BACK_ZERO:
-    RedBackZeroTask();
+    ColorBackZeroTask(NUMBER - RED);
   case GREEN_BACK_ZERO:
-    GreenBacKZeroTask();
+    ColorBackZeroTask(NUMBER - GREEN);
   case BLUE_BACK_ZERO:
-    BuleBackZeroTask();
+    ColorBackZeroTask(NUMBER - BLUE);
   case WRITE:
     WriteTask();
 
@@ -221,26 +221,33 @@ void MainUpdate()
 
 需调节参数：time1Period  快速和慢速循迹参数（pid，和vx速度）    超声波检测距离阈值cm
 */
-void task1()
-{
-  Serial.println("Executing Task 1");
-  unsigned long currentTime = millis();
-  if ((currentTime - task1_time) / 1000 < time1Period)
-  {
-    follower.followLine(400);
-  }
-  else
-  {
-    follower.followLine(200);
-    if (checkTask1Complete())
-    {
-      Serial.println("LineFollowTask  Complete");
-      // 停止小车运动
-      Wheel.set_speed(0, 0, 0);
-      currentTask = CATCH; // 切换到任务 2
+void LineFollowTask() {
+    Serial.println("Executing Task: LineFollowTask");
+
+    unsigned long currentTime = millis();
+
+    // 快速循迹阶段
+    if ((currentTime - task1_time) / 1000 < time1Period) {
+        follower.followLine(400);
+        return; // 提前退出，避免后续代码执行
     }
-  }
+
+    // 减速循迹阶段
+    follower.followLine(250);
+
+    // 检查是否完成任务（直接嵌入距离检测逻辑）
+    if (ultrasonic.getFilteredDistance() < 30) {
+        Serial.println("LineFollowTask Complete");
+
+        // 停止小车运动
+        Wheel.set_speed(0, 0, 0);
+
+        // 切换到下一任务（任务 2：CATCH）
+        currentTask = CATCH;
+    }
 }
+
+
 /*任务 2 的逻辑：调整小车和机械臂进入抓取状态姿态，给openmv发信息进入色块抓取状态并且接收到其发送来的颜色和位置信息,最后实现抓取
 
 先修复小车姿态：Vy和omega，然后读取超声波距离值，并且根据距离值来映射到具体速度下的time，然后右转对准障碍块，
@@ -255,51 +262,68 @@ void CatchTask()
 {
   Serial.println("Executing CatchTask");
 
-  // 修复小车姿态
+  // 修正小车姿态
+  corr_pos(follower);
 
-  float distance = ultrasonic.getFilteredDistance(); // 获取滤波后的距离
+  // 获取超声波距离
+  float distance = ultrasonic.getFilteredDistance();
 
+  // 小车后退并右转，准备抓取任务
   Wheel.backward(distance);
   Wheel.turn_right();
 
+  // 设置机械臂到抓取姿态
   Arm.set_angle(servoAngle_catch);
 
-  sendOpenMVCommand(0x02, 1000, 50); // 连续发送模式 2 指令(色块识别），持续 1000ms，每次间隔 50ms
-  // if (checkTask2Complete())
-  // {
-  //   Serial.println("Task 2 Complete");
-  //   currentTask = TASK_3; // 切换到任务 3
-  // }
-  clearSerialBuffer(Serial);
+  // 向 OpenMV 发送指令，进入色块识别模式
+  sendOpenMVCommand(0x02, 1000, 50); // 连续发送模式 2 指令，持续 1000ms，每次间隔 50ms
+  clearSerialBuffer(Serial);         // 清空串口缓冲区
 
+  // 检查 OpenMV 返回的数据
   if (Arm.receiveOpenMVData(color, px, py))
   {
+    // 根据色块位置进行逆运动学解算
     if (Arm.inverse_kinematics(px, py, 75))
     {
+      delay(100);
+      // 转向以抓取目标
       Wheel.turn_left();
-      Arm.set_angle(servoAngle_follow);
-      // openmv修改为循迹状态
-      sendOpenMVCommand(0x01, 1000, 50); // 连续发送模式 2 指令(色块识别），持续 1000ms，每次间隔 50ms
+      Arm.set_angle(servoAngle_follow); // 恢复机械臂到循迹状态
+
+      // 向 OpenMV 发送指令，切换回循迹模式
+      sendOpenMVCommand(0x01, 1000, 50);
       clearSerialBuffer(Serial);
-      // delay(100);
+
+      // 根据颜色切换到对应任务
       switch (color)
       {
       case 1:
-        currentTask = GO_TO_RED; // 切换到任务 3
+        currentTask = GO_TO_RED;
         break;
       case 2:
         currentTask = GO_TO_GREEN;
+        break;
       case 3:
-        currentTask = GOT_TO_BLUE;
+        currentTask = GO_TO_BLUE;
+        break;
       default:
-        Serial.println("CatchTask switch failed");
+        Serial.println("CatchTask: Invalid color detected");
         break;
       }
+      return; // 任务完成，退出函数
+    }
+    else
+    {
+      Serial.println("CatchTask: Inverse kinematics failed");
     }
   }
+  else
   {
-    Serial.println("CatchTask switch failed:Failed to receive openmv data");
+    Serial.println("CatchTask: Failed to receive OpenMV data");
   }
+
+  // 如果任务未完成，设置轮子停止
+  Wheel.set_speed(0, 0, 0);
 }
 
 /*初始状态：摆正循迹姿态且openmv修改为循迹状态
@@ -314,77 +338,61 @@ void CatchTask()
 
 参数：姿态修正函数，放下色块舵机数据（其二者之间的耦合）
 */
-void GoToRedTask()
+void GoToColorTask(int color)
 {
-  Serial.println("Executing Task 3");
+  Serial.println("Executing Task: GoToRedTask");
 
-  if (checkTask3Complete())
+  // 如果未到达目标（通过 RED 的障碍物数未满足要求）
+  if (!blockJudge(color))
   {
-    Serial.println("Task 3 Complete");
-    currentTask = TASK_DONE; // 所有任务完成
+    follower.followLine(250); // 执行循迹任务
+    return;                   // 未完成任务，直接返回
   }
+
+  // 已完成任务逻辑
+  Wheel.set_speed(0, 0, 0); // 停止轮子运动
+  delay(100);               // 稳定小车位置
+
+  // 调整当前位置
+  corr_pos(follower); // 调用纠正位置函数
+
+  // 获取当前距离，并向后移动
+  float current_distance = ultrasonic.getFilteredDistance();
+  Wheel.backward(current_distance);
+
+  // 操作机械臂进行抓取操作
+  Arm.set_angle(servoAngle_catch);     // 机械臂调整到抓取状态
+  Arm.move_to_angles(servoAngle_down); // 移动到抓取下方
+  delay(100);                          // 延迟确保动作完成
+  Arm.set_angle(servoAngle_follow);    // 恢复机械臂到循迹状态
+
+  // 记录搬运次数  并且 切换任务为 RED_BACK_ZERO
+  total_num++;
+  currentTask = RED_BACK_ZERO;
 }
-/*初始状态：摆正循迹姿态且openmv修改为循迹状态
-
-目标：从标记点出发走到green点（在blockJudge函数判断下执行慢速巡线），
-      执行姿态修正函数，然后放下颜色色块，执行go back 任务
-
-在执行blockJudge函数：返回false时执行循迹任务；
-返回true时停止小车，然后执行姿态修正函数：修改为放下色块姿态，并发下色块，
-执行姿态修正：循迹姿态，然后进行go back（color）任务
-记录搬运次数
-
-参数：姿态修正函数，放下色块舵机数据（其二者之间的耦合）
+/*
+在blockJudge(color)判断下执行慢速循迹到达识别点
+到达之后判读total_num：如果大于等于3，则执行writeTask
+                      反之执行Catch
 */
-void GoToGreenTask()
+void ColorBackZeroTask(int color)
 {
-}
-
-/*初始状态：摆正循迹姿态且openmv修改为循迹状态
-
-目标：从标记点出发走到bule点（在blockJudge函数判断下执行慢速巡线），
-      执行姿态修正函数，然后放下颜色色块，执行go back 任务
-
-在执行blockJudge函数：返回false时执行循迹任务；
-返回true时停止小车，然后执行姿态修正函数：修改为放下色块姿态，并发下色块，
-执行姿态修正：循迹姿态，然后进行go back（color）任务
-记录搬运次数
-
-参数：姿态修正函数，放下色块舵机数据（其二者之间的耦合）
-*/
-void GoToBlueTask()
-{
-}
-
-// 检查任务 1 是否完成
-bool checkTask1Complete()
-{
-  // float distance = ultrasonic.getDistance();              // 获取未滤波的距离
-  float distance = ultrasonic.getFilteredDistance(); // 获取滤波后的距离
-  if (distance < 35)
+  // 检查是否通过了足够的障碍块
+  if (!blockJudge(color))
   {
-    return true;
+    follower.followLine(250); // 如果未完成，继续循迹
+    return;                   // 提前退出，避免后续逻辑执行
   }
-  else
-  {
-    return false;
-  }
+
+  // 判断总数量并切换到对应任务
+  Wheel.set_speed(0, 0, 0);
+  delay(100);
+  currentTask = (total_num < 3) ? CATCH : WRITE;
 }
 
-// 检查任务 2 是否完成
-bool checkTask2Complete()
+void WriteTask()
 {
-  // 根据外部条件或内部状态判断
-  // 示例：某个传感器触发
-  return digitalRead(2) == HIGH; // 假设引脚 2 表示条件满足
-}
-
-// 检查任务 3 是否完成
-bool checkTask3Complete()
-{
-  // 根据外部条件或内部状态判断
-  // 示例：上位机命令 "TASK_3_DONE"
-  return Serial.available() && Serial.readString() == "TASK_3_DONE";
+  Wheel.set_speed(0, 0, 500);
 }
 
 void sendOpenMVCommand(uint8_t parameter, unsigned long duration_ms, int interval_ms)
@@ -581,40 +589,60 @@ void commandHandler(char *tokens[], int tokenCount)
 }
 
 // 检测障碍物函数:输入需要检测到的障碍块数量。
-bool bolockJudge(int identifierCount)
+bool blockJudge(int identifierCount)
 {
   static int passedBlocks = 0;           // 已通过的障碍块数
   static unsigned long blockEndTime = 0; // 超声波屏蔽结束时间
 
-  // 检查当前时间是否仍在屏蔽时间内
-  unsigned long currentTime = millis();
-  if (currentTime < blockEndTime)
+  // 如果已经达到目标标识符数，返回 true
+  if (passedBlocks >= identifierCount)
   {
-    return false; // 超声波仍处于屏蔽状态，直接返回
+    passedBlocks = 0; // 重置障碍块计数
+    blockEndTime = 0; // 重置屏蔽时间
+    return true;
   }
 
-  // 获取当前滤波后的超声波测量距离
-  float distance = ultrasonic.getFilteredDistance();
-  Serial.print("Filtered Distance: ");
-  Serial.println(distance);
+  unsigned long currentTime = millis();
 
-  // 判断是否小于阈值
-  if (distance > 2 && distance < DISTANCE_THRESHOLD)
+  // 如果当前时间小于屏蔽结束时间，说明仍处于屏蔽状态，直接返回 false
+  if (currentTime < blockEndTime)
   {
-    passedBlocks++;                       // 记录通过的障碍块
-    blockEndTime = millis() + BLOCK_TIME; // 设置屏蔽结束时间
+    return false;
+  }
+
+  // 检查距离是否在有效范围内
+  float filteredDistance = ultrasonic.getFilteredDistance(); // 获取滤波后的距离
+  if (filteredDistance > 3.0 && filteredDistance < DISTANCE_THRESHOLD)
+  {
+    passedBlocks++;                          // 记录通过的障碍块
+    blockEndTime = currentTime + BLOCK_TIME; // 更新屏蔽结束时间
     Serial.print("Obstacle Detected! Passed Blocks: ");
     Serial.println(passedBlocks);
   }
 
-  // 检查是否达到目标标识符数
-  if (passedBlocks >= identifierCount)
-  {
-    Serial.println("Target Identifier Count Reached!");
-    passedBlocks = 0; // 重置通过的障碍块数
-    blockEndTime = 0; // 重置屏蔽结束时间
-    return true;
-  }
+  // 尚未达到目标标识符数，返回 false
+  return false;
+}
 
-  return false; // 尚未达到目标标识符数
+void corr_pos(LineFollower &follower, int vx, unsigned long totalTime, unsigned long cycleTime)
+{
+  unsigned long startTime = millis(); // 记录起始时间
+  unsigned long lastCycleTime = 0;    // 上一次任务执行的时间点
+
+  while (millis() - startTime < totalTime)
+  { // 循环执行2秒
+    unsigned long currentTime = millis();
+
+    // 检查是否到了执行周期
+    if (currentTime - lastCycleTime >= cycleTime)
+    {
+      lastCycleTime = currentTime; // 更新上一次执行的时间点
+
+      // 执行循迹任务
+      follower.followLine(vx);
+    }
+
+    // 保持其余时间的执行流畅
+    delay(1); // 小延迟，避免过高的空循环占用CPU
+  }
 }
