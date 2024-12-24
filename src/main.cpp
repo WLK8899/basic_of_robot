@@ -110,6 +110,8 @@ void GoToColorTask(int color);
 void ColorBackZeroTask(int color);
 void WriteTask();
 
+
+void commandHandler(char *tokens[], int tokenCount);
 /*************************************************************************** */
 // 目标坐标
 float target_x = 50;  // x 方向目标点
@@ -119,7 +121,7 @@ float target_z = 75;  // z 方向目标点
 void setup()
 {
   Serial.begin(115200);
-  // hardParser.setCommandCallback(commandHandler);
+  hardParser.setCommandCallback(commandHandler);
 
   follower.begin();   // 初始化
   ultrasonic.begin(); // 初始化超声波引脚
@@ -139,7 +141,7 @@ void loop()
   // unsigned long startTime = micros();
   // unsigned long currentTime = millis();
   // Wheel.set_speed(0,300,0);
-  follower.followLine(400); // 执行循迹任务
+  //follower.followLine(400); // 执行循迹任务
   //  if(Arm.inverse_kinematics(target_x,target_y,target_z)){
   //   Serial.println("sssssss");
   //  }
@@ -147,14 +149,14 @@ void loop()
   //  else{
   //   Serial.println("flase777777777 ");
   //  }
-  delay(100);
+  //delay(100);
 
-  readSensors();
-  // Arm.set_angle(servoAngle);
+  //readSensors();
+   Arm.set_angle(servoAngle_init);
   // Arm.move_to_angles(servoAngle);
   //  // 处理串口数据
   //  //softParser.processSerial();
-  // hardParser.processSerial();
+   hardParser.processSerial();
 
   // unsigned long endTime = micros();
   // unsigned long executionTime = endTime - startTime;
