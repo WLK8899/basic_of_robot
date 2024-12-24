@@ -17,5 +17,5 @@ void setup()
 
 void loop()
 {
-    follower.followLine(300); // 执行循迹任务
+    follower.followLine(); // 执行循迹任务
 }

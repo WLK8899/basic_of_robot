@@ -35,7 +35,7 @@ int total_num = 0;
 // 上电状态：90, 0, 0, 0, 180, 0
 // 抓取  ：90,10 ,60 ,100, 180, 0
 int servoAngle_init[6] = {90, 0, 0, 0, 180, 0};
-int servoAngle_follow[6] = {90, 0, 90, 90, 180, 0};
+int servoAngle_follow[6] = {90, 0, 80, 90, 180, 0};
 int servoAngle_catch[6] = {90, 10, 60, 100, 180, 0};
 int servoAngle_down[6];
 volatile float distance;
@@ -89,7 +89,7 @@ int py = 0;
 
 /******************************定义函数************************************ */
 void readSensors();
-void sendOpenMVCommand(uint8_t parameter, unsigned long duration_ms = 0, int interval_ms = 50);
+void sendOpenMVCommand(uint8_t parameter, unsigned long duration_ms = 1000, int interval_ms = 50);
 
 void clearSerialBuffer(HardwareSerial &serial)
 {
@@ -101,7 +101,7 @@ void clearSerialBuffer(HardwareSerial &serial)
 // 检测障碍物函数
 bool blockJudge(int identifierCount);
 // 姿态修正函数
-void corr_pos(LineFollower &follower, int vx = 0, unsigned long totalTime = 2000, unsigned long cycleTime = 80);
+void corr_pos(LineFollower &follower, int vx = 0, unsigned long totalTime = 2000, unsigned long cycleTime = 30);
 
 void MainUpdate();
 void LineFollowTask();
@@ -110,7 +110,6 @@ void GoToColorTask(int color);
 void ColorBackZeroTask(int color);
 void WriteTask();
 
-
 void commandHandler(char *tokens[], int tokenCount);
 /*************************************************************************** */
 // 目标坐标
@@ -118,45 +117,55 @@ float target_x = 50;  // x 方向目标点
 float target_y = 100; // y 方向目标点
 float target_z = 75;  // z 方向目标点
 
+int col;
+int x;
+int y;
 void setup()
 {
   Serial.begin(115200);
-  hardParser.setCommandCallback(commandHandler);
+  // hardParser.setCommandCallback(commandHandler);
 
   follower.begin();   // 初始化
   ultrasonic.begin(); // 初始化超声波引脚
   Arm.begin();        // 连接舵机到对应引脚
-  Arm.set_angle(servoAngle_init);
+  Arm.set_angle(servoAngle_follow);
 
   currentTask = LINE_FOLLOWER;
 
-  delay(2000);
+  delay(1000);
   Serial.println("Initialization completed");
   task1_time = millis();
+
+  // sendOpenMVCommand(0x01);
 }
 
 void loop()
 {
+  //   sendOpenMVCommand(0x01);
+  // delay(2000);
+  // sendOpenMVCommand(0x02);
+  // delay(2000);
 
   // unsigned long startTime = micros();
   // unsigned long currentTime = millis();
   // Wheel.set_speed(0,300,0);
-  //follower.followLine(400); // 执行循迹任务
+  follower.followLine(); // 执行循迹任务
   //  if(Arm.inverse_kinematics(target_x,target_y,target_z)){
   //   Serial.println("sssssss");
   //  }
 
+  //  Arm.receiveOpenMVData(col,x,y);delay(100);
   //  else{
   //   Serial.println("flase777777777 ");
   //  }
-  //delay(100);
+  // delay(100);
 
-  //readSensors();
-   Arm.set_angle(servoAngle_init);
+  // readSensors();
+  // Arm.set_angle(servoAngle_init);
   // Arm.move_to_angles(servoAngle);
   //  // 处理串口数据
   //  //softParser.processSerial();
-   hardParser.processSerial();
+  // hardParser.processSerial();
 
   // unsigned long endTime = micros();
   // unsigned long executionTime = endTime - startTime;
@@ -223,32 +232,38 @@ void MainUpdate()
 
 需调节参数：time1Period  快速和慢速循迹参数（pid，和vx速度）    超声波检测距离阈值cm
 */
-void LineFollowTask() {
-    Serial.println("Executing Task: LineFollowTask");
+void LineFollowTask()
+{
+  Serial.println("Executing Task: LineFollowTask");
 
-    unsigned long currentTime = millis();
+  static bool openMVCommandSent = false; // 标记是否已经发送过 OpenMV 命令
+  unsigned long currentTime = millis();
 
-    // 快速循迹阶段
-    if ((currentTime - task1_time) / 1000 < time1Period) {
-        follower.followLine(400);
-        return; // 提前退出，避免后续代码执行
-    }
+  // 每次都执行循迹
+  follower.followLine();
 
-    // 减速循迹阶段
-    follower.followLine(250);
+  // 如果尚未发送 OpenMV 指令，且在快速循迹阶段
+  if (!openMVCommandSent && (currentTime - task1_time) / 1000 < time1Period)
+  {
+    sendOpenMVCommand(0x02, 1000, 50); // 连续发送模式 2 指令，持续 1000ms，每次间隔 50ms
+    clearSerialBuffer(Serial);         // 清空串口缓冲区
+    openMVCommandSent = true;          // 设置标记，避免重复执行
+  }
 
-    // 检查是否完成任务（直接嵌入距离检测逻辑）
-    if (ultrasonic.getFilteredDistance() < 30) {
-        Serial.println("LineFollowTask Complete");
+  // 如果 OpenMV 指令已经发送过，检查任务是否完成
+  if (openMVCommandSent && ultrasonic.getFilteredDistance() < 30)
+  {
+    Serial.println("LineFollowTask Complete");
 
-        // 停止小车运动
-        Wheel.set_speed(0, 0, 0);
+    // 停止小车运动
+    Wheel.set_speed(0, 0, 0);
 
-        // 切换到下一任务（任务 2：CATCH）
-        currentTask = CATCH;
-    }
+    // 切换到下一任务（任务 2：CATCH）
+    currentTask = CATCH;
+    sendOpenMVCommand(0x03, 500, 20); // 进入姿态校准模式(vx = 0, vy omega校准)
+    clearSerialBuffer(Serial);        // 清空串口缓冲区
+  }
 }
-
 
 /*任务 2 的逻辑：调整小车和机械臂进入抓取状态姿态，给openmv发信息进入色块抓取状态并且接收到其发送来的颜色和位置信息,最后实现抓取
 
@@ -264,68 +279,76 @@ void CatchTask()
 {
   Serial.println("Executing CatchTask");
 
-  // 修正小车姿态
-  corr_pos(follower);
+  // 静态变量，用于标记是否已完成初始设置（修正姿态、设置机械臂姿态、切换抓取模式）
+  static bool catchinit = false;
 
-  // 获取超声波距离
-  float distance = ultrasonic.getFilteredDistance();
-
-  // 小车后退并右转，准备抓取任务
-  Wheel.backward(distance);
-  Wheel.turn_right();
-
-  // 设置机械臂到抓取姿态
-  Arm.set_angle(servoAngle_catch);
-
-  // 向 OpenMV 发送指令，进入色块识别模式
-  sendOpenMVCommand(0x02, 1000, 50); // 连续发送模式 2 指令，持续 1000ms，每次间隔 50ms
-  clearSerialBuffer(Serial);         // 清空串口缓冲区
-
-  // 检查 OpenMV 返回的数据
-  if (Arm.receiveOpenMVData(color, px, py))
+  // 初始化部分，仅执行一次
+  if (!catchinit)
   {
-    // 根据色块位置进行逆运动学解算
-    if (Arm.inverse_kinematics(px, py, 75))
+    // 修正小车姿态
+    corr_pos(follower);
+    delay(100);
+
+    // 设置机械臂到抓取姿态
+    Arm.set_angle(servoAngle_catch);
+
+    // 向 OpenMV 发送指令，进入色块抓取模式
+    sendOpenMVCommand(0x04, 500, 20); // 进入色块抓取模式
+    clearSerialBuffer(Serial);        // 清空串口缓冲区
+
+    catchinit = true; // 标记已初始化
+    return;           // 直接退出，等待下一次执行
+  }
+
+  // 检查是否检测到色块
+  if (digitalRead(A4) == HIGH)
+  {
+    if (Arm.receiveOpenMVData(color, px, py)) // 检查 OpenMV 返回的数据
     {
+      // 根据色块位置进行逆运动学解算
+      Wheel.set_speed(0, 0, 0);
       delay(100);
-      // 转向以抓取目标
-      Wheel.turn_left();
-      Arm.set_angle(servoAngle_follow); // 恢复机械臂到循迹状态
 
-      // 向 OpenMV 发送指令，切换回循迹模式
-      sendOpenMVCommand(0x01, 1000, 50);
-      clearSerialBuffer(Serial);
-
-      // 根据颜色切换到对应任务
-      switch (color)
+      if (Arm.inverse_kinematics(px, py, 75)) // 如果解算成功
       {
-      case 1:
-        currentTask = GO_TO_RED;
-        break;
-      case 2:
-        currentTask = GO_TO_GREEN;
-        break;
-      case 3:
-        currentTask = GO_TO_BLUE;
-        break;
-      default:
-        Serial.println("CatchTask: Invalid color detected");
-        break;
+        delay(100);
+        Arm.set_angle(servoAngle_follow); // 恢复机械臂到循迹状态
+
+        // 向 OpenMV 发送指令，切换回循迹模式
+        sendOpenMVCommand(0x02, 1000, 50);
+        clearSerialBuffer(Serial);
+
+        // 根据颜色切换到对应任务
+        switch (color)
+        {
+        case RED:
+          currentTask = GO_TO_RED;
+          break;
+        case GREEN:
+          currentTask = GO_TO_GREEN;
+          break;
+        case BLUE:
+          currentTask = GO_TO_BLUE;
+          break;
+        default:
+          Serial.println("CatchTask: Invalid color detected");
+          break;
+        }
+
+        catchinit = false; // 重置初始化标记，为下一次任务做准备
+        return;            // 任务完成，退出函数
       }
-      return; // 任务完成，退出函数
-    }
-    else
-    {
-      Serial.println("CatchTask: Inverse kinematics failed");
+      else
+      {
+        Serial.println("CatchTask: Inverse kinematics failed");
+      }
     }
   }
   else
   {
-    Serial.println("CatchTask: Failed to receive OpenMV data");
+    // 如果未检测到色块，则继续循迹（后退到目标点，色块在视觉中央）
+    follower.followLine();
   }
-
-  // 如果任务未完成，设置轮子停止
-  Wheel.set_speed(0, 0, 0);
 }
 
 /*初始状态：摆正循迹姿态且openmv修改为循迹状态
@@ -347,8 +370,8 @@ void GoToColorTask(int color)
   // 如果未到达目标（通过 RED 的障碍物数未满足要求）
   if (!blockJudge(color))
   {
-    follower.followLine(250); // 执行循迹任务
-    return;                   // 未完成任务，直接返回
+    follower.followLine(); // 执行循迹任务
+    return;                // 未完成任务，直接返回
   }
 
   // 已完成任务逻辑
@@ -370,7 +393,21 @@ void GoToColorTask(int color)
 
   // 记录搬运次数  并且 切换任务为 RED_BACK_ZERO
   total_num++;
-  currentTask = RED_BACK_ZERO;
+  // 根据颜色切换到对应任务
+  switch (color)
+  {
+  case RED:
+    currentTask = RED_BACK_ZERO;
+  case GREEN:
+    currentTask = GREEN_BACK_ZERO;
+    break;
+  case BLUE:
+    currentTask = BLUE_BACK_ZERO;
+    break;
+  default:
+    Serial.println("CatchTask: Invalid color detected");
+    break;
+  }
 }
 /*
 在blockJudge(color)判断下执行慢速循迹到达识别点
@@ -382,8 +419,8 @@ void ColorBackZeroTask(int color)
   // 检查是否通过了足够的障碍块
   if (!blockJudge(color))
   {
-    follower.followLine(250); // 如果未完成，继续循迹
-    return;                   // 提前退出，避免后续逻辑执行
+    follower.followLine(); // 如果未完成，继续循迹
+    return;                // 提前退出，避免后续逻辑执行
   }
 
   // 判断总数量并切换到对应任务
@@ -641,7 +678,7 @@ void corr_pos(LineFollower &follower, int vx, unsigned long totalTime, unsigned 
       lastCycleTime = currentTime; // 更新上一次执行的时间点
 
       // 执行循迹任务
-      follower.followLine(vx);
+      follower.followLine();
     }
 
     // 保持其余时间的执行流畅

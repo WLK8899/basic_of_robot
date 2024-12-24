@@ -279,7 +279,7 @@ bool RobotArm::receiveOpenMVData(int &ball_color, int &ball_px, int &ball_py)
     while (Serial.available() > 0)
     {
         // 搜索帧头
-        Serial.println("222222222222");
+       //Serial.println("222222222222");
         byte data_by = Serial.read();
         if (bufferIndex == 0 && data_by != 0x5C)
         {
@@ -290,7 +290,6 @@ bool RobotArm::receiveOpenMVData(int &ball_color, int &ball_px, int &ball_py)
         // 存储到缓冲区
         /// Serial.println("3333333333");
         buffer[bufferIndex++] = data_by;
-        Serial.print(data_by);
 
         // 如果缓冲区已满，检查是否为完整帧
         if (bufferIndex == 14)
@@ -305,38 +304,39 @@ bool RobotArm::receiveOpenMVData(int &ball_color, int &ball_px, int &ball_py)
 
             // 提取数据
             Serial.println("Color openMV is OK");
-            int32_t color = (static_cast<int32_t>(buffer[1]) << 24) |
+            int32_t color_ = (static_cast<int32_t>(buffer[1]) << 24) |
                             (static_cast<int32_t>(buffer[2]) << 16) |
                             (static_cast<int32_t>(buffer[3]) << 8) |
                             static_cast<int32_t>(buffer[4]);
 
             // int bool_pingyi = buffer[5]; // 中心偏移方向（1 为右，0 为左）
-            int32_t px = (static_cast<int32_t>(buffer[5]) << 24) |
+            int32_t px_ = (static_cast<int32_t>(buffer[5]) << 24) |
                          (static_cast<int32_t>(buffer[6]) << 16) |
                          (static_cast<int32_t>(buffer[7]) << 8) |
                          static_cast<int32_t>(buffer[8]);
 
-            int32_t py = (static_cast<int32_t>(buffer[9]) << 24) |
+            int32_t py_ = (static_cast<int32_t>(buffer[9]) << 24) |
                          (static_cast<int32_t>(buffer[10]) << 16) |
                          (static_cast<int32_t>(buffer[11]) << 8) |
                          static_cast<int32_t>(buffer[12]);
 
-            ball_color = color;
-            ball_px = px;
-            ball_py = py;
+            ball_color = color_;
+            ball_px = px_;
+            ball_py = py_;
 
             // 调试输出
             Serial.print("color: ");
-            Serial.print(ball_color);
+            Serial.print(color_);
             Serial.print("  ;  x: ");
-            Serial.print(ball_px);
+            Serial.print(px_);
             Serial.print("  ;  y: ");
-            Serial.println(ball_py);
+            Serial.println(py_);
             // 处理完成，重置缓冲区
             bufferIndex = 0;
             //检查是否为有效数据
             if (ball_color == 0 || ball_px == 0 || ball_py == 0)
             {
+                Serial.print("color data is 0");
                 return false;
             }
             return true;
