@@ -35,17 +35,18 @@ void RobotArm::set_angle(int *angle)
         servo_angle[i] = angle[i];
     }
 
-    servo1.write(static_cast<int>((32.4592 + angle[0] * 0.7432)));
-    delay(50);
+    servo1.write(static_cast<int>((32.4592 + (angle[0] ) * 0.7432)));
+    delay(200);
     servo2.write(static_cast<int>((51.11 + angle[1] * 0.7432)));
-    delay(50);
+    delay(200);
     servo3.write(static_cast<int>((angle[2] * 0.7432)));
-    delay(50);
-    servo4.write(static_cast<int>((12 + angle[3] * 0.7432)));
-    delay(50);
+    delay(200);
+    servo4.write(static_cast<int>((12 + (angle[3] + 80) * 0.7432)));
+    delay(200);
     servo5.write(static_cast<int>((angle[4] * 0.7432)));
-    delay(50);
+    delay(200);
     servo6.write(static_cast<int>((angle[5] * 0.7432)));
+    delay(200);
 }
 
 // 检查目标点是否在可达范围内
@@ -72,7 +73,7 @@ bool RobotArm::is_target_reachable(float target_x, float target_y, float target_
 }
 
 // 逆解算：根据目标坐标计算舵机角度
-bool RobotArm::inverse_kinematics(float target_x, float target_y, float target_z)
+bool RobotArm::inverse_kinematics(float target_x, float target_y, float target_z, int i)
 {
     if (!is_target_reachable(target_x, target_y, target_z))
     {
@@ -88,7 +89,16 @@ bool RobotArm::inverse_kinematics(float target_x, float target_y, float target_z
         move_to_angles(target_angle); // 如果角度合法，设置舵机角度
         // set_angle(target_angle);
         delay(50);
-        catch_ball();
+        if (i)
+        {
+            catch_ball();
+            delay(150);
+        }
+        else
+        {
+            release_ball();
+            delay(150);
+        }
         return true;
     }
 
@@ -236,7 +246,7 @@ void RobotArm::gradual_move(int servo_index, int target_angle)
         switch (servo_index)
         {
         case 0:
-            servo1.write(static_cast<int>((32.4592 + current_angle * 0.7432)));
+            servo1.write(static_cast<int>((32.4592 + (current_angle ) * 0.7432)));
             break;
         case 1:
             servo2.write(static_cast<int>((51.11 + current_angle * 0.7432)));
@@ -245,7 +255,7 @@ void RobotArm::gradual_move(int servo_index, int target_angle)
             servo3.write(static_cast<int>(current_angle * 0.7432));
             break;
         case 3:
-            servo4.write(static_cast<int>((12 + current_angle * 0.7432)));
+            servo4.write(static_cast<int>((12 + (current_angle + 80) * 0.7432)));
             break;
         case 4:
 
@@ -279,7 +289,7 @@ bool RobotArm::receiveOpenMVData(int &ball_color, int &ball_px, int &ball_py)
     while (Serial.available() > 0)
     {
         // 搜索帧头
-       //Serial.println("222222222222");
+        // Serial.println("222222222222");
         byte data_by = Serial.read();
         if (bufferIndex == 0 && data_by != 0x5C)
         {
@@ -305,20 +315,20 @@ bool RobotArm::receiveOpenMVData(int &ball_color, int &ball_px, int &ball_py)
             // 提取数据
             Serial.println("Color openMV is OK");
             int32_t color_ = (static_cast<int32_t>(buffer[1]) << 24) |
-                            (static_cast<int32_t>(buffer[2]) << 16) |
-                            (static_cast<int32_t>(buffer[3]) << 8) |
-                            static_cast<int32_t>(buffer[4]);
+                             (static_cast<int32_t>(buffer[2]) << 16) |
+                             (static_cast<int32_t>(buffer[3]) << 8) |
+                             static_cast<int32_t>(buffer[4]);
 
             // int bool_pingyi = buffer[5]; // 中心偏移方向（1 为右，0 为左）
             int32_t px_ = (static_cast<int32_t>(buffer[5]) << 24) |
-                         (static_cast<int32_t>(buffer[6]) << 16) |
-                         (static_cast<int32_t>(buffer[7]) << 8) |
-                         static_cast<int32_t>(buffer[8]);
+                          (static_cast<int32_t>(buffer[6]) << 16) |
+                          (static_cast<int32_t>(buffer[7]) << 8) |
+                          static_cast<int32_t>(buffer[8]);
 
             int32_t py_ = (static_cast<int32_t>(buffer[9]) << 24) |
-                         (static_cast<int32_t>(buffer[10]) << 16) |
-                         (static_cast<int32_t>(buffer[11]) << 8) |
-                         static_cast<int32_t>(buffer[12]);
+                          (static_cast<int32_t>(buffer[10]) << 16) |
+                          (static_cast<int32_t>(buffer[11]) << 8) |
+                          static_cast<int32_t>(buffer[12]);
 
             ball_color = color_;
             ball_px = px_;
@@ -333,7 +343,7 @@ bool RobotArm::receiveOpenMVData(int &ball_color, int &ball_px, int &ball_py)
             Serial.println(py_);
             // 处理完成，重置缓冲区
             bufferIndex = 0;
-            //检查是否为有效数据
+            // 检查是否为有效数据
             if (ball_color == 0 || ball_px == 0 || ball_py == 0)
             {
                 Serial.print("color data is 0");
@@ -350,6 +360,45 @@ bool RobotArm::receiveOpenMVData(int &ball_color, int &ball_px, int &ball_py)
 
 void RobotArm::catch_ball()
 {
+    servo_angle[5] = 180;
+    servo6.write(static_cast<int>((180 * 0.7432)));
+}
+void RobotArm::release_ball()
+{
     servo_angle[5] = 90;
     servo6.write(static_cast<int>((90 * 0.7432)));
+}
+
+void RobotArm::Coordinate_mapping(int &px, int &py)
+{
+    const int len = 138;             // 视觉到云台的距离
+    const float parameter = 30 / 35; // 像素点和实际距离的映射
+    px = (px - 160) * parameter;
+    py = len + py * parameter;
+}
+
+void RobotArm::Catch()
+{
+    release_ball();
+    gradual_move(0, 0);
+    gradual_move(4, 180);
+    gradual_move(3, -80);
+    gradual_move(2, 120);
+    gradual_move(1, 60);
+    delay(200);
+    catch_ball();
+    delay(200);
+}
+
+void RobotArm::Release()
+{  
+     catch_ball();
+    gradual_move(0, 0);
+    gradual_move(4, 180);
+    gradual_move(3, -80);
+    gradual_move(2, 120);
+    gradual_move(1, 60);
+    delay(200);
+    release_ball();
+    delay(200);
 }

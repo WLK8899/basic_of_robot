@@ -9,9 +9,12 @@ public:
     RobotArm(int pin1, int pin2, int pin3, int pin4, int pin5, int pin6);
     void begin();
     void set_angle(int *angle); // 设置舵机角度
-    bool inverse_kinematics(float target_x, float target_y, float target_z); // 逆解算，计算舵机角度并设置
+    bool inverse_kinematics(float target_x, float target_y, float target_z,int i); // 逆解算，计算舵机角度并设置
     void move_to_angles(int *target_angles);  // 逐步移动到目标角度
     bool receiveOpenMVData(int &ball_color, int &px, int &py);
+    void Coordinate_mapping(int &px, int &py);
+    void Catch();
+    void Release();
     int servo_angle[6];   // 当前舵机角度 
 private:
     int SERVO1_PIN, SERVO2_PIN, SERVO3_PIN, SERVO4_PIN, SERVO5_PIN, SERVO6_PIN;
@@ -19,7 +22,7 @@ private:
     const float len_2 = 100;   // 机械臂长度 2
     const float len_3 = 95;   // 机械臂长度 3
     const float len_4 = 165;   // 机械臂长度 4
-    const float bottom_r = 80;  // 底部圆盘半径
+    const float bottom_r = 65;  // 底部圆盘半径
 
     int bufferIndex = 0;
     uint8_t buffer[14];
@@ -39,6 +42,7 @@ private:
    
 
     void catch_ball();
+    void release_ball();
 };
 
 #endif

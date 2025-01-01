@@ -14,38 +14,38 @@ void LineFollower::begin()
 
 // 循迹控制任务
 void LineFollower::followLine()
-{
-   // unsigned long currentTime = millis();
+{   
+    unsigned long currentTime = millis();
     // 检查是否到达更新间隔
-    // if (currentTime - lastUpdateTime >= updateInterval)
-    // {
-    //     lastUpdateTime = currentTime;
-    // 计算速度
-    int32_t vx = 0, vy = 0, omega = 0;
-    // 接收数据
-    if (receiveOpenMVData(vx, vy, omega))
+    if (currentTime - lastUpdateTime >= updateInterval)
+    {     //Serial.print("88888888888880");
+        lastUpdateTime = currentTime;
+        // 计算速度
+        int32_t vx = 0, vy = 0, omega = 0;
+        // 接收数据
+        if (receiveOpenMVData(vx, vy, omega))
+        {
+            // computeSpeed(vx, vy, omega); // vx由调用循迹函数时指派
+
+           Wheel.set_speed(vx, vy, omega); // 设置轮子速度
+            //  Serial.print(lastUpdateTime);
+            Serial.print(" vx:");
+            Serial.print(vx);
+            Serial.print(" vy:");
+            Serial.print(vy);
+            Serial.print(" vz:");
+            Serial.println(omega);
+        }
+        // else{
+        //     Wheel.set_speed(0,0,0);
+        // }
+   }
+    else
     {
-        // computeSpeed(vx, vy, omega); // vx由调用循迹函数时指派
 
-        Wheel.set_speed(vx, vy, omega); // 设置轮子速度
-        // Serial.print(lastUpdateTime);
-        Serial.print(" vx:");
-        Serial.print(vx);
-        Serial.print(" vy:");
-        Serial.print(vy);
-        Serial.print(" vz:");
-        Serial.println(omega);
+        // Serial.println("chaoshi : ");
+        return;
     }
-    // else{
-    //     Wheel.set_speed(0,0,0);
-    // }
-    // }
-    // else
-    // {
-
-    //     // Serial.println("chaoshi : ");
-    //     return;
-    // }
 }
 
 bool LineFollower::receiveOpenMVData(int32_t &VX, int32_t &VY, int32_t &OMEGA)
@@ -58,12 +58,12 @@ bool LineFollower::receiveOpenMVData(int32_t &VX, int32_t &VY, int32_t &OMEGA)
         byte data_by = Serial.read();
         if (bufferIndex == 0 && data_by != 0x5A)
         {
-            // Serial.println("222222222222");
+             Serial.println("is not data head");
             continue; // 如果不是帧头，跳过
         }
 
         // 存储到缓冲区
-        // Serial.println("3333333333");
+        //Serial.println(data_by);
         buffer[bufferIndex++] = data_by;
 
         // 如果缓冲区已满，检查是否为完整帧

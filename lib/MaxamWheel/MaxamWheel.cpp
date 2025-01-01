@@ -12,10 +12,10 @@ MaxamWheel::MaxamWheel()
 void MaxamWheel::set_speed(int Vx, int Vy, int omega)
 {
     // 计算每个轮子的目标速度
-    targetSpeeds[0] = Vx - Vy - omega; // 前左轮
-    targetSpeeds[1] = Vx + Vy + omega; // 前右轮
-    targetSpeeds[2] = Vx + Vy - omega; // 后左轮
-    targetSpeeds[3] = Vx - Vy + omega; // 后右轮
+    targetSpeeds[0] = Vx - Vy - omega * 20; // 前左轮
+    targetSpeeds[1] = Vx + Vy + omega * 20; // 前右轮
+    targetSpeeds[2] = Vx + Vy - omega * 20; // 后左轮
+    targetSpeeds[3] = Vx - Vy + omega * 20; // 后右轮
 
     sprintf(cmd_return_tmp, "#%03dP%04dT%04d!", 6, 1500 + targetSpeeds[0], 0); // 左前轮
     Serial.println(cmd_return_tmp);

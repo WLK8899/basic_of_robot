@@ -16,6 +16,7 @@ void modifyMotorID()
 
 void setup()
 {
+    Serial.begin(115200);
     delay(1000);
     // 修改双路ID为6和8
     modifyMotorID();

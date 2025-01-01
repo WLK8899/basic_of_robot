@@ -44,7 +44,7 @@ private:
     float linear_error_sum = 0; // 线性速度积分误差
 
     unsigned long lastUpdateTime = 0;        // 上次更新时间
-    const unsigned long updateInterval = 80; // 单位 ms（10 Hz）
+    const unsigned long updateInterval =10; // 单位 ms（10 Hz）
 
     // 从 OpenMV 接收数据
     bool receiveOpenMVData(int32_t &VX, int32_t &VY, int32_t &OMEGA);
